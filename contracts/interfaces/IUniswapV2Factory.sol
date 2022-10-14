@@ -26,7 +26,7 @@ interface IUniswapV2Factory {
         external
         returns (address pair);
 
-    function setFooTo(address) external;
+    function setFeeTo(address) external;
 
     function setFeeToSetter(address) external;
 }

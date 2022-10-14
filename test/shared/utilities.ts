@@ -1,6 +1,8 @@
+import { Web3Provider } from '@ethersproject/providers';
 import { BigNumber, Contract } from 'ethers';
 import {
   defaultAbiCoder,
+  getAddress,
   keccak256,
   solidityPack,
   toUtf8Bytes
@@ -79,4 +81,50 @@ export async function getApprovalDigest(
       ]
     )
   );
+}
+
+export async function mineBlock(
+  privider: Web3Provider,
+  timestamp: number
+): Promise<void> {
+  await new Promise(async (resolve, reject) => {
+    privider.provider.sendAsync?.(
+      {
+        // jsonrpc: '2.0',
+        method: 'evm_mine',
+        params: [timestamp],
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+    );
+  });
+}
+
+export function encodePrice(reserve0: BigNumber, reserve1: BigNumber) {
+  return [
+    reserve1.mul(BigNumber.from(2).pow(112)).div(reserve0),
+    reserve0.mul(BigNumber.from(2).pow(112)).div(reserve1),
+  ];
+}
+
+export function getCreate2Address(
+  factoryAddress: string,
+  [tokenA, tokenB]: string[],
+  bytecode: string
+): string {
+  const [token0, token1] =
+    tokenA < tokenB ? [tokenA, tokenB] : [tokenB, tokenA];
+  const create2Inputs = [
+    '0xff',
+    factoryAddress,
+    keccak256(solidityPack(['address', 'address'], [token0, token1])),
+    keccak256(bytecode),
+  ];
+  const sanitizedInputs = `0x${create2Inputs.map((i) => i.slice(2)).join('')}`;
+  return getAddress(`0x${keccak256(sanitizedInputs).slice(-40)}`);
 }
